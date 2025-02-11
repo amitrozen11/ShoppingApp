@@ -1,130 +1,106 @@
-package com.example.shoppingapp.fragments;
+package com.example.shoppingapp.adapters;
 
-import android.app.AlertDialog;
-import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.navigation.Navigation;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
-
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shoppingapp.R;
-import com.example.shoppingapp.adapters.ItemAdapter;
 import com.example.shoppingapp.models.item;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class shoppingFragment extends Fragment {
-
-    private RecyclerView recyclerView;
-    private ItemAdapter itemAdapter;
+public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder> {
     private List<item> itemList;
-    private FloatingActionButton addItemButton;
-    private TextView welcomeText;
-    private FirebaseAuth mAuth;
-    private DatabaseReference databaseRef;
+    private OnItemClickListener onItemClickListener;
 
-    public shoppingFragment() {
-        // Required empty public constructor
+    // Constructor
+    public ItemAdapter(List<item> itemList) {
+        this.itemList = itemList != null ? itemList : new ArrayList<>();
+    }
+
+    // Interface for item click handling
+    public interface OnItemClickListener {
+        void onItemRemove(int position);
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.onItemClickListener = listener;
+    }
+
+    @NonNull
+    @Override
+    public ItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_layout, parent, false);
+        return new ItemViewHolder(view);
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_shopping, container, false);
+    public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {
+        item item = itemList.get(position);
+        holder.name.setText(item.getName());
+        holder.description.setText(item.getDescription());
+        holder.price.setText(String.format("$%.2f", item.getPrice() * item.getAmount()));
+        holder.amount.setText("Quantity: " + item.getAmount());
 
-        mAuth = FirebaseAuth.getInstance();
-        databaseRef = FirebaseDatabase.getInstance().getReference("users");
-
-        welcomeText = view.findViewById(R.id.welcomeText);
-        recyclerView = view.findViewById(R.id.recyclerMain);
-        addItemButton = view.findViewById(R.id.addItemButton);
-
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        // Load sample data
-        itemList = new ArrayList<>();
-        itemList.add(new item("Laptop", "Gaming laptop", 1200.99, 3));
-        itemList.add(new item("Smartphone", "Latest Android phone", 799.99, 5));
-        itemList.add(new item("Headphones", "Noise-canceling", 199.99, 2));
-
-        fetchUserFullName();
-
-        // Set Adapter
-        itemAdapter = new ItemAdapter( itemList);
-        recyclerView.setAdapter(itemAdapter);
-
-        // Set up add item button click
-        addItemButton.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_shoppingFragment_to_addItemFragment));
-
-        // Listen for new item data
-        getParentFragmentManager().setFragmentResultListener("requestKey", this, (requestKey, bundle) -> {
-            if (bundle != null) {
-                item newItem = (item) bundle.getSerializable("newItem");
-                if (newItem != null) {
-                    itemList.add(newItem);
-                    itemAdapter.notifyItemInserted(itemList.size() - 1);
-                    Snackbar.make(view, "Item added successfully!", Snackbar.LENGTH_SHORT).show();
-                }
+        holder.deleteIcon.setOnClickListener(v -> {
+            if (onItemClickListener != null) {
+                onItemClickListener.onItemRemove(position);
             }
         });
 
-        itemAdapter.setOnItemClickListener(position -> showDeleteConfirmationDialog(position));
-
-        return view;
+        holder.btnIncrease.setOnClickListener(v -> updateItemAmount(holder, item, 1));
+        holder.btnDecrease.setOnClickListener(v -> updateItemAmount(holder, item, -1));
     }
 
-    private void fetchUserFullName() {
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        if (auth.getCurrentUser() == null) {
-            welcomeText.setText("Welcome, Guest!");
-            return;
+    @Override
+    public int getItemCount() {
+        return itemList.size();
+    }
+
+    // Method to add an item
+    public void addItem(item newItem) {
+        itemList.add(newItem);
+        notifyItemInserted(itemList.size() - 1);
+    }
+
+    // Method to remove an item
+    public void removeItem(int position) {
+        if (position >= 0 && position < itemList.size()) {
+            itemList.remove(position);
+            notifyItemRemoved(position);
         }
-
-        String userId = auth.getCurrentUser().getUid();
-        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("users").child(userId);
-
-        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String firstName = snapshot.child("firstName").getValue(String.class);
-                    String lastName = snapshot.child("lastName").getValue(String.class);
-                    welcomeText.setText("Welcome, " + firstName + " " + lastName + "!");
-                } else {
-                    welcomeText.setText("Welcome, User!");
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                welcomeText.setText("Welcome, User!");
-            }
-        });
     }
 
-    private void showDeleteConfirmationDialog(int position) {
-        new AlertDialog.Builder(getContext())
-                .setTitle("Delete Item")
-                .setMessage("Are you sure you want to remove this item?")
-                .setPositiveButton("Yes", (dialog, which) -> {
-                    itemAdapter.removeItem(position);
-                    Snackbar.make(getView(), "Item Removed", Snackbar.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("No", (dialog, which) -> dialog.dismiss())
-                .show();
+    // Helper method to update item quantity and price
+    private void updateItemAmount(ItemViewHolder holder, item item, int delta) {
+        int newAmount = item.getAmount() + delta;
+        if (newAmount > 0) {
+            item.setAmount(newAmount);
+            holder.amount.setText("Quantity: " + newAmount);
+            holder.price.setText(String.format("$%.2f", item.getPrice() * newAmount));
+        }
+    }
+
+    // ViewHolder class
+    public static class ItemViewHolder extends RecyclerView.ViewHolder {
+        TextView name, description, price, amount;
+        ImageView deleteIcon;
+        Button btnIncrease, btnDecrease;
+
+        public ItemViewHolder(@NonNull View itemView) {
+            super(itemView);
+            name = itemView.findViewById(R.id.itemName);
+            description = itemView.findViewById(R.id.itemDescription);
+            price = itemView.findViewById(R.id.itemPrice);
+            amount = itemView.findViewById(R.id.itemAmount);
+            deleteIcon = itemView.findViewById(R.id.itemDelete);
+            btnIncrease = itemView.findViewById(R.id.btnIncrease);
+            btnDecrease = itemView.findViewById(R.id.btnDecrease);
+        }
     }
 }
