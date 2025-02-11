@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "327302818096",
+    "project_id": "shoppingmanager-e5f0e",
+    "storage_bucket": "shoppingmanager-e5f0e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327302818096:android:d97bf92f14f1eb5e7f80f5",
+        "android_client_info": {
+          "package_name": "com.example.shoppingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-zSL49Uv4KGoCN0sx2FWNwGhRT8nwONI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
