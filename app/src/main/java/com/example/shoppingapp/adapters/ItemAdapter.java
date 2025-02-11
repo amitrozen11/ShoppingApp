@@ -10,7 +10,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shoppingapp.R;
 import com.example.shoppingapp.models.item;
-import com.google.firebase.database.core.Context;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,9 +44,7 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder
         item item = itemList.get(position);
         holder.name.setText(item.getName());
         holder.description.setText(item.getDescription());
-
         holder.price.setText(String.format("$%.2f", item.getPrice() * item.getAmount()));
-
         holder.amount.setText("Quantity: " + item.getAmount());
 
         holder.deleteIcon.setOnClickListener(v -> {
@@ -56,22 +53,9 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder
             }
         });
 
-        holder.btnIncrease.setOnClickListener(v -> {
-            item.setAmount(item.getAmount() + 1);
-            holder.amount.setText("Quantity: " + item.getAmount());  // Update quantity text
-            holder.price.setText(String.format("$%.2f", item.getPrice() * item.getAmount())); // Update price
-        });
-
-        // Decrease item quantity (ensuring it doesn't go below 1) and update price
-        holder.btnDecrease.setOnClickListener(v -> {
-            if (item.getAmount() > 1) {
-                item.setAmount(item.getAmount() - 1);
-                holder.amount.setText("Quantity: " + item.getAmount());  // Update quantity text
-                holder.price.setText(String.format("$%.2f", item.getPrice() * item.getAmount())); // Update price
-            }
-        });
+        holder.btnIncrease.setOnClickListener(v -> updateItemAmount(holder, item, 1));
+        holder.btnDecrease.setOnClickListener(v -> updateItemAmount(holder, item, -1));
     }
-
 
     @Override
     public int getItemCount() {
@@ -89,6 +73,16 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder
         if (position >= 0 && position < itemList.size()) {
             itemList.remove(position);
             notifyItemRemoved(position);
+        }
+    }
+
+    // Helper method to update item quantity and price
+    private void updateItemAmount(ItemViewHolder holder, item item, int delta) {
+        int newAmount = item.getAmount() + delta;
+        if (newAmount > 0) {
+            item.setAmount(newAmount);
+            holder.amount.setText("Quantity: " + newAmount);
+            holder.price.setText(String.format("$%.2f", item.getPrice() * newAmount));
         }
     }
 
